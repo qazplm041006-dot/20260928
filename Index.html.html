@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="ko" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>10초 타이머 & 챌린지 서비스</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & Orbitron -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Orbitron', 'monospace'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glow-effect {
+            box-shadow: 0 0 30px rgba(99, 102, 241, 0.2);
+        }
+        .glow-success {
+            box-shadow: 0 0 35px rgba(34, 197, 94, 0.3);
+        }
+        .glow-danger {
+            box-shadow: 0 0 35px rgba(239, 68, 68, 0.3);
+        }
+    </style>
+</head>
+<body class="h-full bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-indigo-500 selection:text-white overflow-x-hidden">
+
+    <header class="w-full max-w-2xl mx-auto px-4 pt-6 pb-2 flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <span class="font-bold text-lg tracking-tight bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">10초 타이머랩</span>
+        </div>
+        <button id="soundToggleBtn" onclick="toggleSound()" class="px-3 py-1.5 rounded-lg glass-card text-xs font-medium text-slate-300 hover:text-white transition flex items-center space-x-1.5">
+            <svg id="soundIcon" class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
+            </svg>
+            <span id="soundText">사운드 켜짐</span>
+        </button>
+    </header>
+
+    <main class="w-full max-w-md mx-auto px-4 py-6 flex-1 flex flex-col justify-center">
+        
+        <!-- Mode Tabs -->
+        <div class="grid grid-cols-3 gap-2 p-1.5 rounded-2xl glass-card mb-8">
+            <button onclick="switchMode('countdown')" id="tab-countdown" class="py-2.5 rounded-xl text-xs font-semibold transition bg-indigo-600 text-white shadow-md">카운트다운</button>
+            <button onclick="switchMode('challenge')" id="tab-challenge" class="py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition">10초 맞추기</button>
+            <button onclick="switchMode('interval')" id="tab-interval" class="py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition">10초 인터벌</button>
+        </div>
+
+        <div id="mode-countdown" class="space-y-6">
+            <div class="relative w-72 h-72 mx-auto flex items-center justify-center">
+                <!-- Circular Progress Ring -->
+                <svg class="w-full h-full transform -rotate-90">
+                    <circle cx="144" cy="144" r="130" stroke="currentColor" stroke-width="12" class="text-slate-800" fill="transparent"></circle>
+                    <circle id="progressRing" cx="144" cy="144" r="130" stroke="currentColor" stroke-width="12" class="text-indigo-500 transition-all duration-100" fill="transparent" stroke-dasharray="816.8" stroke-dashoffset="0" stroke-linecap="round"></circle>
+                </svg>
+                <!-- Time Display -->
+                <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+                    <span id="cdTimeDisplay" class="font-mono text-6xl font-black tracking-wider text-white">10.0</span>
+                    <span id="cdStatusText" class="text-xs text-indigo-300 font-medium mt-2 tracking-widest uppercase">READY</span>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="flex items-center justify-center space-x-4 pt-2">
+                <button onclick="resetCountdown()" class="w-14 h-14 rounded-2xl glass-card flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition active:scale-95">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                </button>
+                <button id="cdStartBtn" onclick="toggleCountdown()" class="w-36 h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-lg shadow-lg shadow-indigo-600/30 transition flex items-center justify-center space-x-2 active:scale-95">
+                    <svg id="cdStartIcon" class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    <span id="cdStartText">시작</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="mode-challenge" class="hidden space-y-6">
+            <div class="glass-card rounded-3xl p-8 text-center relative overflow-hidden glow-effect transition-all" id="challengeCard">
+                <div class="absolute top-3 left-4 text-xs font-semibold tracking-wider text-indigo-400">PRECISION CHALLENGE</div>
+                <div class="my-6">
+                    <div id="chTimeDisplay" class="font-mono text-6xl font-black tracking-wider text-white">10.000</div>
+                    <div id="chMessage" class="text-sm font-medium text-slate-400 mt-3">버튼을 눌러 10.000초를 정확히 맞추세요!</div>
+                </div>
+                <div id="chResultBadge" class="hidden inline-block px-4 py-1.5 rounded-full text-xs font-bold mb-4"></div>
+            </div>
+
+            <!-- Challenge Controls -->
+            <div class="flex flex-col space-y-3">
+                <button id="chActionBtn" onclick="handleChallengeAction()" class="w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-lg shadow-lg shadow-indigo-600/30 transition active:scale-95">
+                    시작하기 (START)
+                </button>
+                <button onclick="resetChallenge()" class="w-full py-3 rounded-2xl glass-card text-slate-400 hover:text-white font-medium text-sm transition">
+                    기록 초기화
+                </button>
+            </div>
+
+            <!-- Leaderboard / Recent Scores -->
+            <div class="glass-card rounded-2xl p-4">
+                <div class="text-xs font-semibold text-slate-400 mb-2 flex justify-between">
+                    <span>최근 시도 기록</span>
+                    <span id="bestScoreText">최고 기록: -</span>
+                </div>
+                <div id="scoreHistory" class="space-y-1.5 max-h-28 overflow-y-auto text-xs font-mono text-slate-300">
+                    <div class="text-slate-500 text-center py-2">아직 기록이 없습니다.</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="mode-interval" class="hidden space-y-6">
+            <div class="glass-card rounded-3xl p-8 text-center relative glow-effect" id="intervalCard">
+                <div id="intStateBadge" class="inline-block px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 mb-4">준비 완료</div>
+                <div class="my-4">
+                    <span id="intTimeDisplay" class="font-mono text-7xl font-black tracking-wider text-white">10</span>
+                    <div class="text-xs text-slate-400 mt-2">반복 횟수: <span id="intLoopCount" class="font-bold text-white">0회 완료</span></div>
+                </div>
+            </div>
+
+            <!-- Interval Controls -->
+            <div class="flex items-center justify-center space-x-4">
+                <button onclick="resetInterval()" class="w-14 h-14 rounded-2xl glass-card flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition active:scale-95">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                </button>
+                <button id="intStartBtn" onclick="toggleInterval()" class="w-36 h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-lg shadow-lg shadow-indigo-600/30 transition flex items-center justify-center space-x-2 active:scale-95">
+                    <svg id="intStartIcon" class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    <span id="intStartText">시작</span>
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="w-full max-w-2xl mx-auto px-4 py-4 text-center text-xs text-slate-500">
+        <p>&copy; 10초 타이머 랩. 웹 브라우저 최적화 타이머 서비스.</p>
+    </footer>
+
+    <script>
+        // --- Web Audio API for Sound Effects ---
+        let audioCtx = null;
+        let soundEnabled = true;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playBeep(freq = 440, duration = 0.1, type = 'sine') {
+            if (!soundEnabled) return;
+            try {
+                initAudio();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function playSuccessSound() {
+            if (!soundEnabled) return;
+            try {
+                initAudio();
+                const now = audioCtx.currentTime;
+                [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.1, now + idx * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.15);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now + idx * 0.08);
+                    osc.stop(now + idx * 0.08 + 0.15);
+                });
+            } catch (e) {}
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('soundIcon');
+            const text = document.getElementById('soundText');
+            if (soundEnabled) {
+                text.textContent = '사운드 켜짐';
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>';
+            } else {
+                text.textContent = '사운드 꺼짐';
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path>';
+            }
+        }
+
+        // --- Mode Switching Logic ---
+        function switchMode(mode) {
+            // Stop all ongoing timers
+            pauseCountdown();
+            resetChallenge();
+            pauseInterval();
+
+            ['countdown', 'challenge', 'interval'].forEach(m => {
+                document.getElementById(`mode-${m}`).classList.add('hidden');
+                document.getElementById(`tab-${m}`).className = 'py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition';
+            });
+
+            document.getElementById(`mode-${mode}`).classList.remove('hidden');
+            document.getElementById(`tab-${mode}`).className = 'py-2.5 rounded-xl text-xs font-semibold transition bg-indigo-600 text-white shadow-md';
+        }
+
+        // --- Mode 1: Standard Countdown Logic ---
+        let cdDuration = 10000; // 10 seconds in ms
+        let cdRemaining = 10000;
+        let cdTimer = null;
+        let cdRunning = false;
+        let cdLastTime = 0;
+        const CIRCLE_CIRCUMFERENCE = 2 * Math.PI * 130;
+
+        function updateCountdownDisplay() {
+            const sec = (cdRemaining / 1000).toFixed(1);
+            document.getElementById('cdTimeDisplay').textContent = sec;
+            const offset = CIRCLE_CIRCUMFERENCE * (1 - cdRemaining / cdDuration);
+            document.getElementById('progressRing').style.strokeDashoffset = offset;
+        }
+
+        function toggleCountdown() {
+            if (cdRunning) {
+                pauseCountdown();
+            } else {
+                startCountdown();
+            }
+        }
+
+        function startCountdown() {
+            if (cdRemaining <= 0) cdRemaining = cdDuration;
+            cdRunning = true;
+            cdLastTime = performance.now();
+            
+            document.getElementById('cdStartText').textContent = '일시정지';
+            document.getElementById('cdStartIcon').innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+            document.getElementById('cdStatusText').textContent = 'RUNNING...';
+
+            clearInterval(cdTimer);
+            cdTimer = setInterval(() => {
+                const now = performance.now();
+                const delta = now - cdLastTime;
+                cdLastTime = now;
+
+                cdRemaining -= delta;
+                if (cdRemaining <= 0) {
+                    cdRemaining = 0;
+                    pauseCountdown();
+                    playSuccessSound();
+                    document.getElementById('cdStatusText').textContent = 'TIME UP!';
+                }
+                updateCountdownDisplay();
+            }, 16);
+        }
+
+        function pauseCountdown() {
+            cdRunning = false;
+            clearInterval(cdTimer);
+            document.getElementById('cdStartText').textContent = '시작';
+            document.getElementById('cdStartIcon').innerHTML = '<path d="M8 5v14l11-7z"/>';
+            if (cdRemaining > 0 && cdRemaining < cdDuration) {
+                document.getElementById('cdStatusText').textContent = 'PAUSED';
+            }
+        }
+
+        function resetCountdown() {
+            pauseCountdown();
+            cdRemaining = cdDuration;
+            updateCountdownDisplay();
+            document.getElementById('cdStatusText').textContent = 'READY';
+            document.getElementById('progressRing').style.strokeDashoffset = 0;
+        }
+
+        // --- Mode 2: 10-Second Precision Game Logic ---
+        let chState = 'idle'; // 'idle', 'running', 'stopped'
+        let chStartTime = 0;
+        let chElapsed = 0;
+        let chTimer = null;
+        let bestScore = null;
+        let historyList = [];
+
+        function handleChallengeAction() {
+            const btn = document.getElementById('chActionBtn');
+            const card = document.getElementById('challengeCard');
+            const badge = document.getElementById('chResultBadge');
+
+            if (chState === 'idle') {
+                // Start
+                chState = 'running';
+                chStartTime = performance.now();
+                chElapsed = 0;
+                btn.textContent = 'STOP! (딱 10초에 누르기)';
+                btn.className = 'w-full py-4 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-lg shadow-lg shadow-rose-600/30 transition active:scale-95';
+                card.classList.remove('glow-success', 'glow-danger');
+                card.classList.add('glow-effect');
+                badge.classList.add('hidden');
+                document.getElementById('chMessage').textContent = '시간이 흐르는 중... 집중하세요!';
+
+                chTimer = requestAnimationFrame(updateChallenge);
+                playBeep(600, 0.05);
+
+            } else if (chState === 'running') {
+                // Stop
+                cancelAnimationFrame(chTimer);
+                chState = 'stopped';
+                const finalDiff = Math.abs(chElapsed - 10.0);
+                
+                btn.textContent = '다시 도전하기';
+                btn.className = 'w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-lg shadow-lg shadow-indigo-600/30 transition active:scale-95';
+
+                badge.classList.remove('hidden');
+                
+                let rankText = '';
+                let badgeClass = '';
+                if (finalDiff <= 0.05) {
+                    rankText = '🎉 완벽합니다! 신의 손!';
+                    badgeClass = 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+                    card.classList.add('glow-success');
+                    playSuccessSound();
+                } else if (finalDiff <= 0.2) {
+                    rankText = '✨ 대단해요! 아주 근접했습니다.';
+                    badgeClass = 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30';
+                    card.classList.add('glow-success');
+                    playBeep(880, 0.2);
+                } else {
+                    rankText = `😅 아쉬워요! (${finalDiff > 0 ? '+' : ''}${finalDiff.toFixed(3)}초 차이)`;
+                    badgeClass = 'bg-rose-500/20 text-rose-300 border border-rose-500/30';
+                    card.classList.add('glow-danger');
+                    playBeep(220, 0.3);
+                }
+                badge.textContent = rankText;
+                document.getElementById('chMessage').textContent = `기록: ${chElapsed.toFixed(3)}초`;
+
+                // Add to history
+                historyList.unshift({ time: chElapsed.toFixed(3), diff: finalDiff });
+                if (historyList.length > 5) historyList.pop();
+                updateHistoryUI();
+
+            } else {
+                // Reset for next round
+                chState = 'idle';
+                document.getElementById('chTimeDisplay').textContent = '10.000';
+                document.getElementById('chMessage').textContent = '버튼을 눌러 10.000초를 정확히 맞추세요!';
+                btn.textContent = '시작하기 (START)';
+                btn.className = 'w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-lg shadow-lg shadow-indigo-600/30 transition active:scale-95';
+                badge.classList.add('hidden');
+                card.classList.remove('glow-success', 'glow-danger');
+                card.classList.add('glow-effect');
+            }
+        }
+
+        function updateChallenge() {
+            if (chState !== 'running') return;
+            const now = performance.now();
+            chElapsed = (now - chStartTime) / 1000;
+            document.getElementById('chTimeDisplay').textContent = chElapsed.toFixed(3);
+            
+            // Auto stop if it exceeds 15 seconds
+            if (chElapsed >= 15.0) {
+                chState = 'stopped';
+                document.getElementById('chActionBtn').textContent = '다시 도전하기';
+                document.getElementById('chActionBtn').className = 'w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-lg shadow-lg shadow-indigo-600/30 transition active:scale-95';
+                document.getElementById('chResultBadge').classList.remove('hidden');
+                document.getElementById('chResultBadge').textContent = '⏰ 시간 초과! (15초 경과)';
+                document.getElementById('chResultBadge').className = 'inline-block px-4 py-1.5 rounded-full text-xs font-bold mb-4 bg-rose-500/20 text-rose-300 border border-rose-500/30';
+                return;
+            }
+            chTimer = requestAnimationFrame(updateChallenge);
+        }
+
+        function resetChallenge() {
+            cancelAnimationFrame(chTimer);
+            chState = 'idle';
+            chElapsed = 0;
+            document.getElementById('chTimeDisplay').textContent = '10.000';
+            document.getElementById('chMessage').textContent = '버튼을 눌러 10.000초를 정확히 맞추세요!';
+            document.getElementById('chActionBtn').textContent = '시작하기 (START)';
+            document.getElementById('chActionBtn').className = 'w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-lg shadow-lg shadow-indigo-600/30 transition active:scale-95';
+            document.getElementById('chResultBadge').classList.add('hidden');
+            document.getElementById('challengeCard').classList.remove('glow-success', 'glow-danger');
+            document.getElementById('challengeCard').classList.add('glow-effect');
+        }
+
+        function updateHistoryUI() {
+            const container = document.getElementById('scoreHistory');
+            if (historyList.length === 0) {
+                container.innerHTML = '<div class="text-slate-500 text-center py-2">아직 기록이 없습니다.</div>';
+                return;
+            }
+            container.innerHTML = historyList.map((item, idx) => `
+                <div class="flex justify-between items-center bg-slate-900/60 px-3 py-1.5 rounded-lg">
+                    <span>#${historyList.length - idx} 기록: <strong class="text-white">${item.time}초</strong></span>
+                    <span class="${item.diff <= 0.05 ? 'text-emerald-400 font-semibold' : 'text-slate-400'}">${item.diff > 0 ? '+' : ''}${item.diff.toFixed(3)}s</span>
+                </div>
+            `).join('');
+
+            const best = Math.min(...historyList.map(h => h.diff));
+            const bestItem = historyList.find(h => h.diff === best);
+            document.getElementById('bestScoreText').textContent = `최고 오차: ${bestItem ? bestItem.diff.toFixed(3) : '-'}s`;
+        }
+
+
+        // --- Mode 3: 10-Second Interval Timer Logic ---
+        let intRemaining = 10;
+        let intTimer = null;
+        let intRunning = false;
+        let loopCount = 0;
+
+        function toggleInterval() {
+            if (intRunning) {
+                pauseInterval();
+            } else {
+                startInterval();
+            }
+        }
+
+        function startInterval() {
+            intRunning = true;
+            document.getElementById('intStartText').textContent = '일시정지';
+            document.getElementById('intStartIcon').innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+            document.getElementById('intStateBadge').textContent = '인터벌 진행 중 (10초)';
+            document.getElementById('intStateBadge').className = 'inline-block px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 mb-4';
+
+            clearInterval(intTimer);
+            intTimer = setInterval(() => {
+                intRemaining--;
+                if (intRemaining <= 3 && intRemaining > 0) {
+                    playBeep(500, 0.08);
+                }
+                if (intRemaining <= 0) {
+                    playSuccessSound();
+                    loopCount++;
+                    document.getElementById('intLoopCount').textContent = `${loopCount}회 완료`;
+                    intRemaining = 10; // Reset loop
+                }
+                document.getElementById('intTimeDisplay').textContent = intRemaining;
+            }, 1000);
+        }
+
+        function pauseInterval() {
+            intRunning = false;
+            clearInterval(intTimer);
+            document.getElementById('intStartText').textContent = '시작';
+            document.getElementById('intStartIcon').innerHTML = '<path d="M8 5v14l11-7z"/>';
+            document.getElementById('intStateBadge').textContent = '일시정지됨';
+            document.getElementById('intStateBadge').className = 'inline-block px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 mb-4';
+        }
+
+        function resetInterval() {
+            pauseInterval();
+            intRemaining = 10;
+            loopCount = 0;
+            document.getElementById('intTimeDisplay').textContent = intRemaining;
+            document.getElementById('intLoopCount').textContent = '0회 완료';
+            document.getElementById('intStateBadge').textContent = '준비 완료';
+            document.getElementById('intStateBadge').className = 'inline-block px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 mb-4';
+        }
+
+        // Initialize displays on load
+        window.onload = function() {
+            updateCountdownDisplay();
+        };
+    </script>
+</body>
+</html>
